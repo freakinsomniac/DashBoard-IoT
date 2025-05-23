@@ -48,60 +48,61 @@
                             <th>Tinggi (cm)</th>
                         </tr>
                     </thead>
-                    <tbody id="history-table-body">
-                        <tr>
-                            <td colspan="5">Memuat data...</td>
-                        </tr>
+                    <tbody>
+                        @forelse($histories as $history)
+                            <tr>
+                                <td class="text-secondary" style="font-size: 0.95em;">
+                                    <i class="bi bi-clock"></i>
+                                    {{ \Carbon\Carbon::parse($history->timestamp)->format('d M Y H:i:s') }}
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-primary">
+                                        <i class="bi bi-cpu"></i> {{ $history->device ? $history->device->name : '-' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @if(!is_null($history->value_temp))
+                                        <span class="badge bg-info text-dark px-3 py-2" style="font-size:1em;">
+                                            <i class="bi bi-thermometer-half"></i> {{ number_format($history->value_temp, 2) }} &#8451;
+                                        </span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if(!is_null($history->value_ph))
+                                        <span class="badge bg-success px-3 py-2" style="font-size:1em;">
+                                            <i class="bi bi-droplet"></i> {{ number_format($history->value_ph, 2) }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if(!is_null($history->value_height))
+                                        <span class="badge bg-warning text-dark px-3 py-2" style="font-size:1em;">
+                                            <i class="bi bi-arrow-up"></i> {{ number_format($history->value_height, 0) }} cm
+                                        </span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-muted">Belum ada data history.</td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
+
+                <div class="mt-3">
+                    <nav class="d-flex justify-content-center">
+                        {{ $histories->withQueryString()->links('pagination::bootstrap-5') }}
+                    </nav>
+                </div>
             </div>
         </div>
-        {{-- Hapus atau komen bagian ini --}}
-        {{-- <div class="mt-3">
-            {{ $histories->withQueryString()->links() }}
-        </div> --}}
     </div>
 </div>
-
-<script>
-function renderHistoryTable(histories) {
-    let html = '';
-    if(histories.length === 0) {
-        html = `<tr><td colspan="5" class="text-muted">Belum ada data history.</td></tr>`;
-    } else {
-        histories.forEach(history => {
-            html += `<tr>
-                <td>${history.timestamp}</td>
-                <td>${history.device ? history.device.name : '-'}</td>
-                <td>${history.value_temp !== null ? `<span class="badge bg-info">${history.value_temp}</span>` : '<span class="text-muted">-</span>'}</td>
-                <td>${history.value_ph !== null ? `<span class="badge bg-success">${history.value_ph}</span>` : '<span class="text-muted">-</span>'}</td>
-                <td>${history.value_height !== null ? `<span class="badge bg-warning text-dark">${history.value_height}</span>` : '<span class="text-muted">-</span>'}</td>
-            </tr>`;
-        });
-    }
-    document.getElementById('history-table-body').innerHTML = html;
-}
-
-function fetchHistory() {
-    let deviceId = document.getElementById('device_id').value;
-    if (!deviceId) {
-        document.getElementById('history-message').style.display = '';
-        document.getElementById('history-table-wrapper').style.display = 'none';
-        return;
-    }
-    document.getElementById('history-message').style.display = 'none';
-    document.getElementById('history-table-wrapper').style.display = '';
-    fetch(`/api/history?device_id=${deviceId}`)
-        .then(res => res.json())
-        .then(data => renderHistoryTable(data));
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('device_id').addEventListener('change', fetchHistory);
-    fetchHistory();  // initial
-});
-
-// Fetch setiap 3 detik
-setInterval(fetchHistory, 3000);
-</script>
 @endsection
