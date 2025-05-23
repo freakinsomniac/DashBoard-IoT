@@ -56,9 +56,10 @@
                 </table>
             </div>
         </div>
-        <div class="mt-3">
+        {{-- Hapus atau komen bagian ini --}}
+        {{-- <div class="mt-3">
             {{ $histories->withQueryString()->links() }}
-        </div>
+        </div> --}}
     </div>
 </div>
 

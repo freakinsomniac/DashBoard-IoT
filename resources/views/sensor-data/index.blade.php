@@ -100,13 +100,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setInterval(function () {
         if (!selectedDevice || !selectedSensor) return;
-        fetch("{{ route('sensor.latest') }}?device_id=" + selectedDevice + "&sensor_id=" + selectedSensor)
+        fetch("/api/sensor-data/latest?device_id=" + selectedDevice)
             .then(response => response.json())
             .then(data => {
                 const now = new Date().toLocaleTimeString();
-                addData(chart, now, data.value);
+                addData(chart, now, data[selectedSensor]);
                 document.getElementById('digital-indicator').innerHTML =
-                    data.value + '&nbsp;<span style="font-size:32px;">&#8451;</span>';
+                    data[selectedSensor] + '&nbsp;<span style="font-size:32px;">&#8451;</span>';
                 if (chart.data.labels.length > 20) {
                     removeOldestData(chart);
                 }

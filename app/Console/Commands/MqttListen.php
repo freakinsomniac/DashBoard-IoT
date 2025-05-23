@@ -50,6 +50,8 @@ class MqttListen extends Command
                             'value_height' => $data['value_height'] ?? null,
                             'timestamp'    => now(),
                         ]);
+                        // Update status device jadi online
+                        \App\Models\Device::where('id', $data['device_id'])->update(['status' => 'online']);
                     }
                 }, 0);
 

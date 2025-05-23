@@ -95,10 +95,19 @@ Route::middleware('auth')->group(function () {
 
 // Route untuk API data sensor terbaru
 Route::get('/api/sensor-data/latest', function (Illuminate\Http\Request $request) {
-    $data = \App\Models\SensorData::where('device_id', $request->device_id)
+    $deviceId = $request->device_id;
+    $sensorId = $request->sensor_id;
+    $data = \App\Models\SensorData::where('device_id', $deviceId)
         ->orderByDesc('timestamp')
         ->first();
-    return response()->json($data);
+
+    // Sesuaikan jika ingin ambil value tertentu
+    return response()->json([
+        'value_temp' => $data->value_temp ?? null,
+        'value_ph' => $data->value_ph ?? null,
+        'value_height' => $data->value_height ?? null,
+        'timestamp' => $data->timestamp ?? null,
+    ]);
 });
 
 // Route untuk riwayat
@@ -128,3 +137,8 @@ Route::get('/mqtt-test', [\App\Http\Controllers\MqttTestController::class, 'publ
 
 // Route untuk cek koneksi MQTT (AJAX)
 Route::get('/devices/check-mqtt', [\App\Http\Controllers\DeviceController::class, 'checkMqttBroker'])->name('devices.check-mqtt');
+
+// Route untuk status perangkat
+Route::get('/api/devices/status', function() {
+    return \App\Models\Device::select('id', 'status')->get();
+});

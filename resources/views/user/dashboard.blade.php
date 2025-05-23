@@ -56,11 +56,9 @@
                                     <tr>
                                         <td>{{ $device->name }}</td>
                                         <td>
-                                            @if($device->status === 'online')
-                                                <span class="badge bg-success px-3 py-2">Online</span>
-                                            @else
-                                                <span class="badge bg-secondary px-3 py-2">Offline</span>
-                                            @endif
+                                            <span id="status-badge-{{ $device->id }}" class="badge {{ $device->status === 'online' ? 'bg-success' : 'bg-secondary' }} px-3 py-2">
+                                                {{ ucfirst($device->status) }}
+                                            </span>
                                         </td>
                                     </tr>
                                 @empty
@@ -261,5 +259,25 @@ client.on('message', function (topic, message) {
         console.error('Invalid MQTT message:', message.toString());
     }
 });
+
+function fetchDeviceStatus() {
+    fetch('/api/devices/status')
+        .then(res => res.json())
+        .then(devices => {
+            devices.forEach(device => {
+                const badge = document.getElementById('status-badge-' + device.id);
+                if (badge) {
+                    if (device.status === 'online') {
+                        badge.className = 'badge bg-success px-3 py-2';
+                        badge.textContent = 'Online';
+                    } else {
+                        badge.className = 'badge bg-secondary px-3 py-2';
+                        badge.textContent = 'Offline';
+                    }
+                }
+            });
+        });
+}
+setInterval(fetchDeviceStatus, 3000); // refresh setiap 3 detik
 </script>
 @endsection
