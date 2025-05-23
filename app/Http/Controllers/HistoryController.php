@@ -19,21 +19,17 @@ class HistoryController extends Controller
         // Ambil semua device milik user
         $devices = Device::where('user_id', $user->id)->get();
 
-        // Ambil semua sensor milik device user
-        $sensors = SensorData::whereIn('device_id', $devices->pluck('id'))
-            ->select('sensor_id', 'sensor_type', 'device_id')
-            ->distinct()
-            ->get();
-
         // Query histories sesuai filter
-        $query = SensorData::whereIn('device_id', $devices->pluck('id'))->with('device')->orderByDesc('timestamp');
-        if ($request->filled('sensor_id')) {
-            $query->where('sensor_id', $request->sensor_id);
-        }
+        $query = SensorData::with('device')
+            ->whereIn('device_id', $devices->pluck('id'))
+            ->when($request->filled('device_id'), function ($q) use ($request) {
+                $q->where('device_id', $request->device_id);
+            })
+            ->orderByDesc('timestamp');
         $histories = $query->paginate(20);
 
         // Kirim ke view
-        return view('history.index', compact('devices', 'sensors', 'histories'));
+        return view('history.index', compact('devices', 'histories'));
     }
 
     public function apiHistory(Request $request)
@@ -48,9 +44,7 @@ class HistoryController extends Controller
             ->with('device')
             ->orderByDesc('timestamp');
 
-        if ($request->filled('sensor_id')) {
-            $query->where('sensor_id', $request->sensor_id);
-        }
+        // Tidak perlu filter sensor_id lagi
 
         $histories = $query->limit(50)->get();
 

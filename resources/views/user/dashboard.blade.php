@@ -96,22 +96,71 @@
                                 <label for="sensor-input" class="form-label">Pilih Sensor</label>
                                 <select id="sensor-input" class="form-select">
                                     <option value="">Pilih Sensor</option>
-                                    @foreach($sensors as $sensor)
-                                        <option value="{{ $sensor->id }}" data-device="{{ $sensor->device_id }}">
-                                            {{ $sensor->sensor_type }}
-                                        </option>
-                                    @endforeach
+                                    <option value="value_temp">Suhu (&deg;C)</option>
+                                    <option value="value_ph">pH</option>
+                                    <option value="value_height">Tinggi (cm)</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <!-- Tabel Data Sensor -->
+            <div class="dashboard-card mt-4">
+                <div class="dashboard-title mb-3">
+                    <i class="bi bi-thermometer-half"></i> Data Sensor Terbaru
+                </div>
+                <table class="table table-bordered text-center align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Device</th>
+                            <th>Waktu</th>
+                            <th>Temp (&deg;C)</th>
+                            <th>pH</th>
+                            <th>Tinggi (cm)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($sensorData as $data)
+                            <tr>
+                                <td>{{ $data->device->name ?? '-' }}</td>
+                                <td>{{ $data->timestamp }}</td>
+                                <td>
+                                    @if(!is_null($data->value_temp))
+                                        <span class="badge bg-info">{{ $data->value_temp }}</span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if(!is_null($data->value_ph))
+                                        <span class="badge bg-success">{{ $data->value_ph }}</span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if(!is_null($data->value_height))
+                                        <span class="badge bg-warning text-dark">{{ $data->value_height }}</span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-muted">Belum ada data sensor.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script>
 let chart;
 let selectedDevice = '';
@@ -144,13 +193,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Filter sensor sesuai device
     document.getElementById('device-input').addEventListener('change', function () {
         selectedDevice = this.value;
-        let sensorSelect = document.getElementById('sensor-input');
-        for (let opt of sensorSelect.options) {
-            if (!opt.value) continue;
-            opt.style.display = (opt.getAttribute('data-device') === selectedDevice) ? '' : 'none';
-        }
-        sensorSelect.value = '';
-        selectedSensor = '';
         chart.data.labels = [];
         chart.data.datasets[0].data = [];
         chart.update();
@@ -160,19 +202,20 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedSensor = this.value;
         chart.data.labels = [];
         chart.data.datasets[0].data = [];
+        chart.data.datasets[0].label = this.options[this.selectedIndex].text;
         chart.update();
     });
 
     // Fetch data realtime
     setInterval(function () {
         if (!selectedDevice || !selectedSensor) return;
-        fetch(`/api/sensor-data/latest?device_id=${selectedDevice}&sensor_id=${selectedSensor}`)
+        fetch(`/api/sensor-data/latest?device_id=${selectedDevice}`)
             .then(response => response.json())
             .then(data => {
-                if (!data.value) return;
+                if (typeof data[selectedSensor] === 'undefined' || data[selectedSensor] === null) return;
                 const now = new Date().toLocaleTimeString();
                 chart.data.labels.push(now);
-                chart.data.datasets[0].data.push(data.value);
+                chart.data.datasets[0].data.push(data[selectedSensor]);
                 if (chart.data.labels.length > 20) {
                     chart.data.labels.shift();
                     chart.data.datasets[0].data.shift();
@@ -180,6 +223,43 @@ document.addEventListener('DOMContentLoaded', function () {
                 chart.update();
             });
     }, 2000);
+});
+
+const mqttUrl = 'wss://test.mosquitto.org:8081/mqtt'; // MQTT over WebSocket
+const topic = 'nata/python/mqtt';
+
+const client = mqtt.connect(mqttUrl);
+
+client.on('connect', function () {
+    console.log('Connected to MQTT broker');
+    client.subscribe(topic, function (err) {
+        if (!err) {
+            console.log('Subscribed to topic:', topic);
+        }
+    });
+});
+
+client.on('message', function (topic, message) {
+    // Misal pesan: {"device_id":1,"value_temp":25,"value_ph":7,"value_height":10}
+    try {
+        const data = JSON.parse(message.toString());
+        // Ambil device dan sensor yang dipilih user
+        const selectedDevice = document.getElementById('device-input').value;
+        const selectedSensor = document.getElementById('sensor-input').value;
+
+        if (data.device_id == selectedDevice && selectedSensor) {
+            const now = new Date().toLocaleTimeString();
+            chart.data.labels.push(now);
+            chart.data.datasets[0].data.push(data[selectedSensor]);
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+            chart.update();
+        }
+    } catch (e) {
+        console.error('Invalid MQTT message:', message.toString());
+    }
 });
 </script>
 @endsection

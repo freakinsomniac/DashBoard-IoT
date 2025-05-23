@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Device;
 use App\Models\SensorData; // gunakan model SensorData
+use PhpMqtt\Client\MqttClient;
+use PhpMqtt\Client\ConnectionSettings;
 
 class DeviceController extends Controller
 {
@@ -17,11 +19,6 @@ class DeviceController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'sensor_id' => 'required',
-            'sensor_type' => 'required',
-        ]);
-
         // Jika pilih device lama
         if ($request->device_id) {
             $device = \App\Models\Device::where('id', $request->device_id)
@@ -37,19 +34,21 @@ class DeviceController extends Controller
                 'name' => $request->name,
                 'type' => $request->type,
                 'user_id' => optional($request->user())->id,
+                'status' => $request->status,
+                'description' => $request->description,
             ]);
         }
 
-        // Tambah sensor ke device terpilih/baru
+        // Tambah data sensor ke device terpilih/baru
         \App\Models\SensorData::create([
-            'device_id'   => $device->id,
-            'sensor_id'   => $request->sensor_id,
-            'sensor_type' => $request->sensor_type,
-            'value'       => 0,
-            'timestamp'   => now(),
+            'device_id'    => $device->id,
+            'value_temp'   => $request->value_temp,
+            'value_ph'     => $request->value_ph,
+            'value_height' => $request->value_height,
+            'timestamp'    => now(),
         ]);
 
-        return redirect()->route('devices.index')->with('success', 'Perangkat dan sensor berhasil ditambahkan!');
+        return redirect()->route('devices.index')->with('success', 'Perangkat dan data sensor berhasil ditambahkan!');
     }
     public function show($id)
     {
@@ -62,5 +61,49 @@ class DeviceController extends Controller
         // Ambil semua device milik user login
         $devices = \App\Models\Device::where('user_id', optional($request->user())->id)->get();
         return view('devices.create', compact('devices'));
+    }
+
+    public function checkMqttBroker()
+    {
+        try {
+            $mqtt = new MqttClient(env('MQTT_HOST', 'test.mosquitto.org'), env('MQTT_PORT', 1883), 'laravel-check');
+            $settings = new ConnectionSettings();
+            $mqtt->connect($settings, true);
+            $mqtt->disconnect();
+            return response()->json(['status' => 'ok']);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+    public function edit($id)
+    {
+        $device = \App\Models\Device::findOrFail($id);
+        return view('devices.edit', compact('device'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|string|max:255',
+            'status' => 'required|in:online,offline',
+            'description' => 'nullable|string|max:255',
+        ]);
+
+        $device = \App\Models\Device::findOrFail($id);
+        $device->update([
+            'name' => $request->name,
+            'type' => $request->type,
+            'status' => $request->status,
+            'description' => $request->description,
+        ]);
+
+        return redirect()->route('devices.index')->with('success', 'Perangkat berhasil diupdate!');
+    }
+    public function destroy($id)
+    {
+        $device = \App\Models\Device::findOrFail($id);
+        $device->delete();
+        return redirect()->route('devices.index')->with('success', 'Perangkat berhasil dihapus!');
     }
 }

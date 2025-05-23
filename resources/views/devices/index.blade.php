@@ -21,6 +21,7 @@
                                 <th>Tipe Board</th>
                                 <th>Status</th>
                                 <th>Keterangan</th>
+                                <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -36,10 +37,22 @@
                                         @endif
                                     </td>
                                     <td>{{ $device->description ?? '-' }}</td>
+                                    <td>
+                                        <a href="{{ route('devices.edit', $device->id) }}" class="btn btn-warning btn-sm">
+                                            <i class="bi bi-pencil-square"></i> Edit
+                                        </a>
+                                        <form action="{{ route('devices.destroy', $device->id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('Yakin ingin menghapus perangkat ini?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-muted">Belum ada perangkat.</td>
+                                    <td colspan="5" class="text-muted">Belum ada perangkat.</td>
                                 </tr>
                             @endforelse
                         </tbody>

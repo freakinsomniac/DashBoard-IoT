@@ -48,6 +48,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/devices', [DeviceController::class, 'index'])->name('devices.index');
     Route::get('/devices/create', [DeviceController::class, 'create'])->name('devices.create');
     Route::post('/devices', [DeviceController::class, 'store'])->name('devices.store');
+    Route::get('/devices/{device}/edit', [DeviceController::class, 'edit'])->name('devices.edit');
+    Route::put('/devices/{device}', [DeviceController::class, 'update'])->name('devices.update');
+    Route::delete('/devices/{device}', [DeviceController::class, 'destroy'])->name('devices.destroy');
 });
 
 // Route untuk autentikasi
@@ -93,10 +96,9 @@ Route::middleware('auth')->group(function () {
 // Route untuk API data sensor terbaru
 Route::get('/api/sensor-data/latest', function (Illuminate\Http\Request $request) {
     $data = \App\Models\SensorData::where('device_id', $request->device_id)
-        ->where('id', $request->sensor_id)
         ->orderByDesc('timestamp')
         ->first();
-    return response()->json(['value' => $data ? $data->value : null]);
+    return response()->json($data);
 });
 
 // Route untuk riwayat
@@ -120,3 +122,9 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+// Route untuk pengujian MQTT
+Route::get('/mqtt-test', [\App\Http\Controllers\MqttTestController::class, 'publish']);
+
+// Route untuk cek koneksi MQTT (AJAX)
+Route::get('/devices/check-mqtt', [\App\Http\Controllers\DeviceController::class, 'checkMqttBroker'])->name('devices.check-mqtt');

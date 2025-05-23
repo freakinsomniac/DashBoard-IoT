@@ -6,7 +6,7 @@
         <i class="bi bi-clock-history"></i> History Data Perangkat
     </h3>
 
-    <a href="{{ route('history.export', ['sensor_id' => request('sensor_id')]) }}" class="btn btn-success mb-3 shadow-sm">
+    <a href="{{ route('history.export', ['device_id' => request('device_id')]) }}" class="btn btn-success mb-3 shadow-sm">
         <i class="bi bi-file-earmark-excel"></i> Export Excel
     </a>
 
@@ -21,19 +21,6 @@
                     @foreach($devices as $device)
                         <option value="{{ $device->id }}" {{ request('device_id') == $device->id ? 'selected' : '' }}>
                             {{ $device->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-auto">
-                <label for="sensor_id" class="col-form-label fw-semibold text-secondary">Filter Sensor:</label>
-            </div>
-            <div class="col-auto">
-                <select name="sensor_id" id="sensor_id" class="form-select shadow-sm">
-                    <option value="">-- Semua Sensor --</option>
-                    @foreach($sensors as $sensor)
-                        <option value="{{ $sensor->sensor_id }}" data-device="{{ $sensor->device_id }}" {{ request('sensor_id') == $sensor->sensor_id ? 'selected' : '' }}>
-                            {{ $sensor->sensor_type }} (ID: {{ $sensor->sensor_id }})
                         </option>
                     @endforeach
                 </select>
@@ -56,9 +43,9 @@
                         <tr>
                             <th>Waktu</th>
                             <th>Device</th>
-                            <th>Tipe Sensor</th>
-                            <th>ID Sensor</th>
-                            <th>Value</th>
+                            <th>Suhu (&deg;C)</th>
+                            <th>pH</th>
+                            <th>Tinggi (cm)</th>
                         </tr>
                     </thead>
                     <tbody id="history-table-body">
@@ -77,35 +64,25 @@
 
 <script>
 function renderHistoryTable(histories) {
-    let prevValue = null;
-    let prevSensor = null;
     let html = '';
     if(histories.length === 0) {
         html = `<tr><td colspan="5" class="text-muted">Belum ada data history.</td></tr>`;
     } else {
         histories.forEach(history => {
-            let isChanged = prevSensor === history.sensor_id && prevValue !== null && prevValue != history.value;
-            html += `<tr${isChanged ? ' style="background-color: #ffeeba;"' : ''}>
+            html += `<tr>
                 <td>${history.timestamp}</td>
                 <td>${history.device ? history.device.name : '-'}</td>
-                <td>${history.sensor_type}</td>
-                <td>${history.sensor_id}</td>
-                <td>
-                    <span class="fw-bold">${history.value}</span>
-                    ${isChanged ? '<span class="badge bg-warning text-dark ms-2">Changed</span>' : ''}
-                </td>
+                <td>${history.value_temp !== null ? `<span class="badge bg-info">${history.value_temp}</span>` : '<span class="text-muted">-</span>'}</td>
+                <td>${history.value_ph !== null ? `<span class="badge bg-success">${history.value_ph}</span>` : '<span class="text-muted">-</span>'}</td>
+                <td>${history.value_height !== null ? `<span class="badge bg-warning text-dark">${history.value_height}</span>` : '<span class="text-muted">-</span>'}</td>
             </tr>`;
-            prevValue = history.value;
-            prevSensor = history.sensor_id;
         });
     }
     document.getElementById('history-table-body').innerHTML = html;
 }
 
 function fetchHistory() {
-    // Ambil value setiap kali fungsi dipanggil
     let deviceId = document.getElementById('device_id').value;
-    let sensorId = document.getElementById('sensor_id').value;
     if (!deviceId) {
         document.getElementById('history-message').style.display = '';
         document.getElementById('history-table-wrapper').style.display = 'none';
@@ -113,38 +90,13 @@ function fetchHistory() {
     }
     document.getElementById('history-message').style.display = 'none';
     document.getElementById('history-table-wrapper').style.display = '';
-    fetch(`/api/history?device_id=${deviceId}&sensor_id=${sensorId}`)
+    fetch(`/api/history?device_id=${deviceId}`)
         .then(res => res.json())
         .then(data => renderHistoryTable(data));
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const deviceSelect = document.getElementById('device_id');
-    const sensorSelect = document.getElementById('sensor_id');
-
-    function filterSensors() {
-        const selectedDevice = deviceSelect.value;
-        for (let opt of sensorSelect.options) {
-            if (!opt.value) continue;
-            if (!selectedDevice || opt.getAttribute('data-device') === selectedDevice) {
-                opt.style.display = '';
-            } else {
-                opt.style.display = 'none';
-            }
-        }
-        // Reset sensor jika tidak cocok
-        if (selectedDevice && sensorSelect.selectedOptions.length && sensorSelect.selectedOptions[0].getAttribute('data-device') !== selectedDevice) {
-            sensorSelect.value = '';
-        }
-    }
-
-    deviceSelect.addEventListener('change', function() {
-        filterSensors();
-        fetchHistory();
-    });
-    sensorSelect.addEventListener('change', fetchHistory);
-
-    filterSensors(); // initial
+    document.getElementById('device_id').addEventListener('change', fetchHistory);
     fetchHistory();  // initial
 });
 

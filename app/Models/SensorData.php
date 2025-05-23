@@ -9,14 +9,17 @@ class SensorData extends Model
 {
     use HasFactory;
 
+    protected $table = 'sensor_data';
+
     protected $fillable = [
-        'device_id', 'sensor_id', 'sensor_type', 'value', 'timestamp'
+        'device_id', 'value_temp', 'value_ph', 'value_height', 'timestamp'
     ];
 
     protected $casts = [
         'timestamp' => 'datetime',
-        'value' => 'float'
     ];
+
+    public $timestamps = true; // jika pakai created_at/updated_at
 
     public function device()
     {

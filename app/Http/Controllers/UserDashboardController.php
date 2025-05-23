@@ -17,7 +17,14 @@ class UserDashboardController extends Controller
         $devices = Device::where('user_id', $user->id)->get();
         $sensors = SensorData::whereIn('device_id', $devices->pluck('id'))->get();
 
-        return view('user.dashboard', compact('devices', 'sensors'));
+        // Ambil data sensor terbaru (misal 10 data terakhir)
+        $sensorData = SensorData::with('device')
+            ->whereIn('device_id', $devices->pluck('id'))
+            ->orderByDesc('timestamp')
+            ->limit(10)
+            ->get();
+
+        return view('user.dashboard', compact('devices', 'sensors', 'sensorData'));
     }
 
     // Form tambah device
