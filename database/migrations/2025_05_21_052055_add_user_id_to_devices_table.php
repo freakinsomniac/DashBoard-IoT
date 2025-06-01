@@ -23,6 +23,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('devices', function (Blueprint $table) {
+            // Cari dan drop foreign key secara otomatis
             $table->dropForeign(['user_id']);
             $table->dropColumn('user_id');
         });
