@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Device;
 use App\Models\SensorData;
 use Illuminate\Support\Facades\Auth;
+use App\Exports\HistoryExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class HistoryController extends Controller
 {
@@ -49,5 +51,16 @@ class HistoryController extends Controller
         $histories = $query->limit(50)->get();
 
         return response()->json($histories);
+    }
+
+    public function export(Request $request)
+    {
+        $sensor_id = $request->input('sensor_id');
+        $user_id = Auth::id();
+
+        return Excel::download(
+            new HistoryExport($sensor_id, $user_id),
+            'history.xlsx'
+        );
     }
 }
